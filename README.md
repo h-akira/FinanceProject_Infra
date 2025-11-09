@@ -180,11 +180,14 @@ CodeBuild実行時、`buildspec.yml`が以下の処理を自動実行します�
 
 1. **config.jsonの自動生成**
    - `config_sample.json`を`config.json`にコピー
-   - Parameter Store(`/Common/ACM/arn`)からACM証明書ARNを取得
-   - Parameter Store(`/Dashboard/S3/contents/bucket_name`)からS3バケット名を取得
+   - Parameter Storeから必要な値を取得：
+     - `/Common/ACM/arn` → ACM証明書ARN
+     - `/Dashboard/S3/contents/bucket_name` → S3バケット名
+     - `/Dashboard/DynamoDB/main/table_name` → DynamoDBテーブル名
    - プレースホルダーを実際の値に置き換え
      - `REPLACE_WITH_ACM_CERTIFICATE_ARN` → ACM証明書ARN
      - `REPLACE_WITH_S3_BUCKET_NAME` → S3バケット名
+     - `REPLACE_WITH_DYNAMODB_TABLE_NAME` → DynamoDBテーブル名
 
 2. **CDKデプロイ**
    - Python仮想環境(.venv)の作成
@@ -210,6 +213,13 @@ CodeBuildで自動デプロイするには、以下の設定が必要です：
      --value "s3-finance-dashboard-contents-XXXXXXXXXXXX" \
      --type String \
      --region ap-northeast-1
+
+   # DynamoDBテーブル名
+   AWS_PROFILE=finance aws ssm put-parameter \
+     --name "/Dashboard/DynamoDB/main/table_name" \
+     --value "table-finance-dashboard-main" \
+     --type String \
+     --region ap-northeast-1
    ```
 
 2. **CodeBuildプロジェクトの作成**
@@ -227,6 +237,7 @@ CodeBuildで自動デプロイするには、以下の設定が必要です：
 | config.json | 手動作成・編集 | buildspec.ymlで自動生成 |
 | ACM ARN | config.jsonに直接記述 | Parameter Storeから取得 |
 | S3バケット名 | config.jsonに直接記述 | Parameter Storeから取得 |
+| DynamoDBテーブル名 | config.jsonに直接記述 | Parameter Storeから取得 |
 | デプロイ | `cdk deploy`を手動実行 | GitHubへのPushで自動実行 |
 
 ## 主な機能

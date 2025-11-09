@@ -8,6 +8,7 @@ env:
   parameter-store:
     ACM_ARN: /Common/ACM/arn
     S3_CONTENTS_BUCKET_NAME: /Dashboard/S3/contents/bucket_name
+    DYNAMODB_TABLE_NAME: /Dashboard/DynamoDB/main/table_name
 
 phases:
   install:
@@ -30,6 +31,8 @@ phases:
       - sed -i "s|REPLACE_WITH_ACM_CERTIFICATE_ARN|${ACM_ARN}|g" config.json
       - echo "Replacing S3 contents bucket name in config.json..."
       - sed -i "s|REPLACE_WITH_S3_BUCKET_NAME|${S3_CONTENTS_BUCKET_NAME}|g" config.json
+      - echo "Replacing DynamoDB table name in config.json..."
+      - sed -i "s|REPLACE_WITH_DYNAMODB_TABLE_NAME|${DYNAMODB_TABLE_NAME}|g" config.json
       - echo "Checking CDK version..."
       - cdk --version
       - echo "Checking if CDK bootstrap is required..."

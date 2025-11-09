@@ -14,7 +14,7 @@
     "acm_certificate_arn": "REPLACE_WITH_ACM_CERTIFICATE_ARN",
     "s3_bucket_name": "REPLACE_WITH_S3_BUCKET_NAME",
     "s3_origin_path": "/CloudFront",
-    "backend_stack_name": "stack-finance-dashboard-backend-main",
-    "dynamodb_table_name": "table-finance-dashboard-main"
+    "backend_stack_name": "stack-finance-dashboard-backend",
+    "dynamodb_table_name": "REPLACE_WITH_DYNAMODB_TABLE_NAME"
   }
 }
