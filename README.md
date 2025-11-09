@@ -61,8 +61,8 @@ CDKを初めて使用する環境では、`cdk bootstrap`を実行する必要�
 cd /Users/hakira/Programs/wambda-develop/FinanceProject_Infra/init
 
 AWS_PROFILE=finance aws cloudformation deploy \
-  --template-file cfn-execution-policy.yaml \
-  --stack-name stack-finance-infra-cfn-execution-policy \
+  --template-file cfn-execution-policies.yaml \
+  --stack-name stack-finance-infra-cfn-execution-policies \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ap-northeast-1
 ```
@@ -72,7 +72,7 @@ AWS_PROFILE=finance aws cloudformation deploy \
 ```bash
 # ポリシーARNを動的に取得
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-finance-infra-cfn-execution-policy \
+  --stack-name stack-finance-infra-cfn-execution-policies \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -299,7 +299,7 @@ CDKでは、**CDK実行者**（開発者/CI/CD）と**CloudFormation Execution R
 
 4. **Route53**: DNSレコード設定は含まれていません。手動で設定してください。
 
-5. **CloudFormation Execution Role**: デフォルトではAdministratorAccess相当の権限が付与されます。本番環境では必ず`--cloudformation-execution-policies`でカスタムポリシー（[init/cfn-execution-policy.yaml](init/cfn-execution-policy.yaml)）を使用してください。
+5. **CloudFormation Execution Role**: デフォルトではAdministratorAccess相当の権限が付与されます。本番環境では必ず`--cloudformation-execution-policies`でカスタムポリシー（[init/cfn-execution-policies.yaml](init/cfn-execution-policies.yaml)）を使用してください。
 
 6. **API Gateway URL**: Dashboard MainスタックはSAMスタックからAPI Gateway URLを自動的にインポートします。`config.json`で`sam_stack_name`を指定する必要があります（詳細は「API Gateway URL の設定方法」参照）。
 
