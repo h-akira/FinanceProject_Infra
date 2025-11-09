@@ -73,7 +73,7 @@ phases:
           echo "  - IAM Policy: ${IAM_ARN}"
 
           cdk bootstrap \
-            --cloudformation-execution-policies ${COGNITO_DYNAMODB_ARN} ${STORAGE_ARN} ${CONFIG_ARN} ${IAM_ARN} \
+            --cloudformation-execution-policies "${COGNITO_DYNAMODB_ARN},${STORAGE_ARN},${CONFIG_ARN},${IAM_ARN}" \
             --region ${CDK_DEFAULT_REGION}
         else
           echo "CDKToolkit stack already exists. Skipping bootstrap."
