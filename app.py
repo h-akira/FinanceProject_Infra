@@ -24,7 +24,7 @@ app = cdk.App()
 # Deploy this first
 cognito_stack = CognitoStack(
   app,
-  "FinanceCommonCognitoStack",
+  "stack-finance-common-infra-cognito",
   user_pool_name=config["cognito"]["user_pool_name"],
   client_name=config["cognito"]["client_name"],
   ssm_prefix=config["cognito"]["ssm_prefix"],
@@ -36,7 +36,7 @@ cognito_stack = CognitoStack(
 # Stack 2: DynamoDB Table for Dashboard Backend
 dynamodb_stack = DashboardDynamoDBStack(
   app,
-  "FinanceDashboardDynamoDBStack",
+  "stack-finance-dashboard-infra-dynamodb",
   table_name=config["dashboard"]["dynamodb_table_name"],
   environment=environment,
   env=cdk.Environment(account=account, region=region),
@@ -48,7 +48,7 @@ dynamodb_stack = DashboardDynamoDBStack(
 # API Gateway URL is automatically imported from SAM stack output
 dashboard_main_stack = DashboardMainStack(
   app,
-  "FinanceDashboardMainStack",
+  "stack-finance-dashboard-infra-main",
   domain_name=config["dashboard"]["domain_name"],
   acm_certificate_arn=config["dashboard"]["acm_certificate_arn"],
   s3_bucket_name=config["dashboard"]["s3_bucket_name"],

@@ -1,23 +1,6 @@
 # Finance Project Infrastructure CDK
 
 AWS CDK (Python)によるFinance Projectのインフラストラクチャ定義です。
-Terraform版(`FinanceProject_Infra`)と同じリソースをCDKで実装しています。
-
-## 📚 学習教材
-
-CDKの学習教材を用意しています。本プロジェクトを題材にして、CDKの基礎から実践まで学べます。
-
-詳しくは → **[Learning/README.md](Learning/README.md)**
-
-### 教材の内容
-- **01_CDK基礎.md** - CDKとは何か？基本概念
-- **02_Stack編.md** - Stackの詳細とスタック間の依存関係
-- **03_Construct編.md** - ConstructのレベルとAPIの使い分け
-- **04_実践編.md** - 本プロジェクトを題材にした実践的な使い方
-- **05_Tips編.md** - よくあるパターンと注意点
-- **06_権限管理編.md** - CDK実行に必要な権限の詳細
-
----
 
 ## 構成
 
@@ -30,7 +13,9 @@ FinanceProject_Infra/
 │       ├── main_stack.py         # S3 + CloudFront
 │       └── dynamodb_stack.py     # DynamoDB Table
 ├── app.py                        # CDKアプリケーションエントリーポイント
+├── buildspec.yml                 # CodeBuild用ビルド仕様
 ├── config.json                   # 設定ファイル（環境変数、リソース名など）
+├── config_sample.json            # 設定ファイルサンプル（CodeBuildで使用）
 ├── cdk.json                      # CDK設定
 └── requirements.txt              # Python依存関係
 ```
@@ -77,7 +62,7 @@ cd /Users/hakira/Programs/wambda-develop/FinanceProject_Infra/init
 
 AWS_PROFILE=finance aws cloudformation deploy \
   --template-file cfn-execution-policies.yaml \
-  --stack-name stack-cdk-exec-policies \
+  --stack-name stack-finance-common-infra-cfn-execution-policies \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ap-northeast-1
 ```
@@ -87,7 +72,7 @@ AWS_PROFILE=finance aws cloudformation deploy \
 ```bash
 # ポリシーARNを動的に取得
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-cdk-exec-policies \
+  --stack-name stack-finance-common-infra-cfn-execution-policies \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -98,19 +83,9 @@ AWS_PROFILE=finance cdk bootstrap \
   --region ap-northeast-1
 ```
 
-#### 代替案：デフォルトのPowerUserAccess（開発環境のみ）
-
-```bash
-# 開発環境の場合のみ使用可能
-AWS_PROFILE=finance cdk bootstrap \
-  --cloudformation-execution-policies arn:aws:iam::aws:policy/PowerUserAccess
-```
-
-**⚠️ PowerUserAccessは広すぎる権限です。本番環境では必ずカスタムポリシーを使用してください。**
-
 **注意**: `cdk bootstrap`は、CDKが使用するS3バケット、ECRリポジトリ、CloudFormation Execution Role等を作成します。環境（アカウント+リージョン）ごとに1回だけ実行すればOKです。
 
-詳細は → **[Learning/06_権限管理編.md](Learning/06_権限管理編.md)** および **[init/README.md](init/README.md)**
+詳細は → **[init/README.md](init/README.md)**
 
 ### 5. config.jsonの設定値を編集
 
@@ -160,10 +135,9 @@ cdk ls
 
 出力例:
 ```
-FinanceCommonCognitoStack
-FinanceDashboardCodeBuildBackendStack
-FinanceDashboardCodeBuildFrontendStack
-FinanceDashboardMainStack
+stack-finance-common-infra-cognito
+stack-finance-dashboard-infra-dynamodb
+stack-finance-dashboard-infra-main
 ```
 
 ### CloudFormationテンプレートの生成
@@ -176,10 +150,13 @@ cdk synth
 
 ```bash
 # Cognitoスタック
-AWS_PROFILE=finance cdk deploy FinanceCommonCognitoStack
+AWS_PROFILE=finance cdk deploy stack-finance-common-infra-cognito
+
+# DynamoDBスタック
+AWS_PROFILE=finance cdk deploy stack-finance-dashboard-infra-dynamodb
 
 # Dashboard Mainスタック
-AWS_PROFILE=finance cdk deploy FinanceDashboardMainStack
+AWS_PROFILE=finance cdk deploy stack-finance-dashboard-infra-main
 
 # 全スタック一括デプロイ
 AWS_PROFILE=finance cdk deploy --all
@@ -188,48 +165,81 @@ AWS_PROFILE=finance cdk deploy --all
 ### スタックの削除
 
 ```bash
-AWS_PROFILE=finance cdk destroy FinanceDashboardMainStack
-AWS_PROFILE=finance cdk destroy FinanceCommonCognitoStack
+AWS_PROFILE=finance cdk destroy stack-finance-dashboard-infra-main
+AWS_PROFILE=finance cdk destroy stack-finance-dashboard-infra-dynamodb
+AWS_PROFILE=finance cdk destroy stack-finance-common-infra-cognito
 ```
 
-## Terraform版との対応
+## CodeBuildによる自動デプロイ
 
-| Terraform | CDK |
-|-----------|-----|
-| `FinanceProject_Infra/common/cognito` | `FinanceCommonCognitoStack` |
-| `FinanceProject_Infra/dashboard/main` | `FinanceDashboardMainStack` |
-| `FinanceProject_Infra/dashboard/codebuild_backend` | `FinanceDashboardCodeBuildBackendStack` |
-| `FinanceProject_Infra/dashboard/codebuild_frontend` | `FinanceDashboardCodeBuildFrontendStack` |
+このプロジェクトは、CodeBuildによるCI/CDパイプラインに対応しています。
+
+### buildspec.ymlの動作
+
+CodeBuild実行時、`buildspec.yml`が以下の処理を自動実行します：
+
+1. **config.jsonの自動生成**
+   - `config_sample.json`を`config.json`にコピー
+   - Parameter Store(`/Common/ACM/main`)からACM証明書ARNを取得
+   - プレースホルダー`REPLACE_WITH_ACM_CERTIFICATE_ARN`を実際のARNに置き換え
+
+2. **CDKデプロイ**
+   - Python仮想環境(.venv)の作成
+   - 依存関係のインストール
+   - `cdk deploy --all`で全スタックをデプロイ
+
+### 必要な事前設定
+
+CodeBuildで自動デプロイするには、以下の設定が必要です：
+
+1. **ACM証明書ARNをParameter Storeに保存**
+   ```bash
+   AWS_PROFILE=finance aws ssm put-parameter \
+     --name "/Common/ACM/main" \
+     --value "arn:aws:acm:us-east-1:XXXXXXXXXXXX:certificate/XXXXXXXX" \
+     --type String \
+     --region ap-northeast-1
+   ```
+
+2. **CodeBuildプロジェクトの作成**
+
+   `FinanceProject_CICD`リポジトリの`codebuild-infra.yaml`を使用してCodeBuildプロジェクトを作成してください。
+
+3. **GitHubへのPush**
+
+   mainブランチへのPushで自動的にデプロイが実行されます。
+
+### ローカル開発との違い
+
+| 項目 | ローカル開発 | CodeBuild |
+|------|-------------|-----------|
+| config.json | 手動作成・編集 | buildspec.ymlで自動生成 |
+| ACM ARN | config.jsonに直接記述 | Parameter Storeから取得 |
+| デプロイ | `cdk deploy`を手動実行 | GitHubへのPushで自動実行 |
 
 ## 主な機能
 
-### FinanceCommonCognitoStack
+### stack-finance-common-infra-cognito
 - Cognito User Pool作成
 - Cognito User Pool Client作成（シークレット付き）
 - SSM Parameter Storeへの認証情報保存
 - パスワードポリシー設定（最小8文字、大文字/小文字/数字/記号必須）
 - トークン有効期限設定（Access/ID: 30分、Refresh: 5日）
 
-### FinanceDashboardMainStack
+### stack-finance-dashboard-infra-dynamodb
+- DynamoDB Table作成
+- パーティションキー: `pk`、ソートキー: `sk`
+- オンデマンド課金モード
+- ポイントインタイムリカバリ有効化
+- 削除保護（RemovalPolicy.RETAIN）
+
+### stack-finance-dashboard-infra-main
 - S3バケット作成（フロントエンド静的ファイル用）
 - CloudFront Distribution作成
 - Origin Access Control (OAC)設定
 - カスタムドメイン設定（ACM証明書）
 - API Gateway Originの設定（/accounts/*, /api/*）
 - SPAルーティング対応（404→200 /index.html）
-
-### FinanceDashboardCodeBuildBackendStack
-- CodeBuildプロジェクト作成（Backend用）
-- IAMロール作成（SAMデプロイに必要な権限）
-- GitHub Webhookの設定（mainブランチPUSH時に自動ビルド）
-- Lambda、API Gateway、CloudFormation等の権限設定
-- SSM Parameter Storeアクセス権限
-
-### FinanceDashboardCodeBuildFrontendStack
-- CodeBuildプロジェクト作成（Frontend用）
-- IAMロール作成（S3デプロイに必要な権限）
-- GitHub Webhookの設定（mainブランチPUSH時に自動ビルド）
-- S3バケットへのデプロイ権限
 
 ## 権限管理
 
@@ -253,8 +263,6 @@ CDKでは、**CDK実行者**（開発者/CI/CD）と**CloudFormation Execution R
 ```
 
 **重要**: CDK実行者には、リソース作成権限は不要です。実際のリソース作成は、`cdk bootstrap`で作成されるCloudFormation Execution Roleが行います。
-
-詳細は → **[Learning/06_権限管理編.md](Learning/06_権限管理編.md)**
 
 ---
 
@@ -285,12 +293,12 @@ CDKでは、**CDK実行者**（開発者/CI/CD）と**CloudFormation Execution R
 
 Dashboard MainスタックはCloudFrontのOriginとしてAPI Gatewayを使用します。API Gateway URLは**SAMスタックから自動的にインポート**されます。
 
-`config.json`で`sam_stack_name`を指定してください：
+`config.json`で`backend_stack_name`を指定してください：
 
 ```json
 {
   "dashboard": {
-    "sam_stack_name": "finance-dashboard-backend-sam",
+    "backend_stack_name": "stack-finance-dashboard-backend-main",
     ...
   }
 }
@@ -316,43 +324,27 @@ CDKはSAMスタックの`${StackName}-ApiUrl`というExport値を`Fn::ImportVal
 
 ## デプロイ順序の推奨
 
-Terraform版と同様の依存関係を考慮した推奨デプロイ順序：
+依存関係を考慮した推奨デプロイ順序：
 
 1. **Cognito** → 認証基盤（必須）
-2. **CodeBuild Backend** → SAMでAPI Gatewayを作成
-3. **Backend（SAM）をCodeBuildでデプロイ** → API Gatewayが作成される
+2. **DynamoDB** → データストア
+3. **Backend（SAM）** → API Gateway作成（CodeBuildまたは手動）
 4. **Dashboard Main** → S3 + CloudFront（SAMスタックからAPI Gateway URLを自動取得）
-5. **CodeBuild Frontend** → S3バケットへのデプロイ（Mainスタック後）
 
 ```bash
 # 1. Cognito
-AWS_PROFILE=finance cdk deploy FinanceCommonCognitoStack
+AWS_PROFILE=finance cdk deploy stack-finance-common-infra-cognito
 
-# 2. CodeBuild Backend
-AWS_PROFILE=finance cdk deploy FinanceDashboardCodeBuildBackendStack
+# 2. DynamoDB
+AWS_PROFILE=finance cdk deploy stack-finance-dashboard-infra-dynamodb
 
-# 3. CodeBuildで Backend（SAM）をデプロイ（手動またはGitHub Push）
+# 3. Backend（SAM）をデプロイ
+# CodeBuildの場合：
 aws codebuild start-build --project-name build-finance-dashboard-backend --region ap-northeast-1
+# または手動の場合：
+cd FinanceDashboardProject_Backend && sam build && sam deploy
 
 # 4. Dashboard Main（SAMスタックからAPI Gateway URLを自動インポート）
-AWS_PROFILE=finance cdk deploy FinanceDashboardMainStack
-
-# 5. CodeBuild Frontend
-AWS_PROFILE=finance cdk deploy FinanceDashboardCodeBuildFrontendStack
+AWS_PROFILE=finance cdk deploy stack-finance-dashboard-infra-main
 ```
 
-## 改善点
-
-Terraform版と比較したCDK版の改善点：
-
-- **型安全性**: Pythonの型ヒントにより、設定ミスを事前に検出
-- **依存関係管理**: `add_dependency()`で明示的な依存関係設定
-- **コード再利用**: Constructパターンで共通ロジックを再利用可能
-- **統合開発体験**: CDK CLIによる統一されたデプロイ体験
-
-## 今後の拡張予定
-
-- [ ] Custom Resource for Cognito Client Secret自動取得
-- [ ] CloudWatch Alarms追加
-- [ ] Lambda@Edge for CloudFront
-- [ ] WAF統合

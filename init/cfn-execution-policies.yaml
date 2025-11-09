@@ -8,7 +8,7 @@ Description: >
     1. Deploy this stack first:
        AWS_PROFILE=finance aws cloudformation deploy \
          --template-file cfn-execution-policies.yaml \
-         --stack-name FinanceCDKExecutionPolicies \
+         --stack-name stack-finance-common-infra-cfn-execution-policies \
          --capabilities CAPABILITY_NAMED_IAM \
          --region ap-northeast-1
 

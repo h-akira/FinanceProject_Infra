@@ -52,7 +52,7 @@ cd /Users/hakira/Programs/wambda-develop/FinanceProject_Infra/init
 
 AWS_PROFILE=finance aws cloudformation deploy \
   --template-file cfn-execution-policies.yaml \
-  --stack-name stack-cdk-exec-policies \
+  --stack-name stack-finance-common-infra-cfn-execution-policies \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ap-northeast-1
 ```
@@ -64,7 +64,7 @@ AWS_PROFILE=finance aws cloudformation deploy \
 ```bash
 # ポリシーARNを取得
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-cdk-exec-policies \
+  --stack-name stack-finance-common-infra-cfn-execution-policies \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -83,7 +83,7 @@ Policy ARN: arn:aws:iam::355202574892:policy/CDKCloudFormationExecutionPolicy-Fi
 ```bash
 # ポリシーARNを動的に取得してbootstrap
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-cdk-exec-policies \
+  --stack-name stack-finance-common-infra-cfn-execution-policies \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -97,7 +97,7 @@ AWS_PROFILE=finance cdk bootstrap \
 ```bash
 # ポリシーARNを取得
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-cdk-exec-policies \
+  --stack-name stack-finance-common-infra-cfn-execution-policies \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -142,7 +142,7 @@ cd /Users/hakira/Programs/wambda-develop/FinanceProject_Infra/init
 
 AWS_PROFILE=finance aws cloudformation deploy \
   --template-file cfn-execution-policies.yaml \
-  --stack-name stack-cdk-exec-policies \
+  --stack-name stack-finance-common-infra-cfn-execution-policies \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ap-northeast-1
 ```
@@ -178,7 +178,7 @@ User: arn:aws:sts::XXXXXXXXXXXX:assumed-role/cdk-hnb659fds-cfn-exec-role-XXXXXXX
 ```bash
 # ポリシースタックを削除
 AWS_PROFILE=finance aws cloudformation delete-stack \
-  --stack-name stack-cdk-exec-policies \
+  --stack-name stack-finance-common-infra-cfn-execution-policies \
   --region ap-northeast-1
 
 # Bootstrap環境を削除
@@ -203,4 +203,3 @@ AWS_PROFILE=finance cdk bootstrap --region ap-northeast-1
 - [AWS CDK Bootstrap](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html)
 - [CloudFormation Execution Policies](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html#bootstrapping-customizing)
 - [IAM Best Practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
-- [Learning/06_権限管理編.md](../Learning/06_権限管理編.md)
