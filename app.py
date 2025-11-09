@@ -1,28 +1,63 @@
 #!/usr/bin/env python3
 import os
-
+import json
 import aws_cdk as cdk
 
-from finance_project_infra_cdk.finance_project_infra_cdk_stack import FinanceProjectInfraCdkStack
+from stacks import (
+  CognitoStack,
+  DashboardMainStack,
+  DashboardDynamoDBStack,
+)
 
+# Load configuration from config.json
+with open("config.json", "r") as f:
+  config = json.load(f)
+
+# Get account from environment or config
+account = config.get("account") or os.getenv("CDK_DEFAULT_ACCOUNT")
+region = config["region"]
+environment = config["environment"]
 
 app = cdk.App()
-FinanceProjectInfraCdkStack(app, "FinanceProjectInfraCdkStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+# Stack 1: Cognito (Common Authentication)
+# Deploy this first
+cognito_stack = CognitoStack(
+  app,
+  "FinanceCommonCognitoStack",
+  user_pool_name=config["cognito"]["user_pool_name"],
+  client_name=config["cognito"]["client_name"],
+  ssm_prefix=config["cognito"]["ssm_prefix"],
+  environment=environment,
+  env=cdk.Environment(account=account, region=region),
+  description="Cognito User Pool and Client for Finance Project",
+)
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
+# Stack 2: DynamoDB Table for Dashboard Backend
+dynamodb_stack = DashboardDynamoDBStack(
+  app,
+  "FinanceDashboardDynamoDBStack",
+  table_name=config["dashboard"]["dynamodb_table_name"],
+  environment=environment,
+  env=cdk.Environment(account=account, region=region),
+  description="DynamoDB table for Finance Dashboard Backend",
+)
 
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
-
-    #env=cdk.Environment(account='123456789012', region='us-east-1'),
-
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    )
+# Stack 3: Dashboard Main (S3 + CloudFront)
+# Deploy this after SAM stack is deployed
+# API Gateway URL is automatically imported from SAM stack output
+dashboard_main_stack = DashboardMainStack(
+  app,
+  "FinanceDashboardMainStack",
+  domain_name=config["dashboard"]["domain_name"],
+  acm_certificate_arn=config["dashboard"]["acm_certificate_arn"],
+  s3_bucket_name=config["dashboard"]["s3_bucket_name"],
+  s3_origin_path=config["dashboard"]["s3_origin_path"],
+  backend_stack_name=config["dashboard"]["backend_stack_name"],
+  environment=environment,
+  env=cdk.Environment(account=account, region=region),
+  description="S3 + CloudFront for Frontend (auto-imports API Gateway URL from SAM)",
+)
+# Note: Ensure SAM stack is deployed before deploying this stack
 
 app.synth()

@@ -1,0 +1,20 @@
+{
+  "account": null,
+  "region": "ap-northeast-1",
+  "environment": "production",
+
+  "cognito": {
+    "user_pool_name": "user-pool-finance-common",
+    "client_name": "client-finance-common",
+    "ssm_prefix": "/Cognito"
+  },
+
+  "dashboard": {
+    "domain_name": "dashboard.finance.h-akira.net",
+    "acm_certificate_arn": "arn:aws:acm:us-east-1:XXXXXXXXXXXX:certificate/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+    "s3_bucket_name": "s3-finance-dashboard-contents",
+    "s3_origin_path": "/CloudFront",
+    "backend_stack_name": "stack-finance-dashboard-backend-main",
+    "dynamodb_table_name": "table-finance-dashboard-main"
+  }
+}
