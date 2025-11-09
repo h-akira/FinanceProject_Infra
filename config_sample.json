@@ -12,7 +12,7 @@
   "dashboard": {
     "domain_name": "dashboard.finance.h-akira.net",
     "acm_certificate_arn": "REPLACE_WITH_ACM_CERTIFICATE_ARN",
-    "s3_bucket_name": "s3-finance-dashboard-contents",
+    "s3_bucket_name": "REPLACE_WITH_S3_BUCKET_NAME",
     "s3_origin_path": "/CloudFront",
     "backend_stack_name": "stack-finance-dashboard-backend-main",
     "dynamodb_table_name": "table-finance-dashboard-main"

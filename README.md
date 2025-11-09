@@ -61,8 +61,8 @@ CDKを初めて使用する環境では、`cdk bootstrap`を実行する必要�
 cd /Users/hakira/Programs/wambda-develop/FinanceProject_Infra/init
 
 AWS_PROFILE=finance aws cloudformation deploy \
-  --template-file cfn-execution-policies.yaml \
-  --stack-name stack-finance-common-infra-cfn-execution-policies \
+  --template-file cfn-execution-policy.yaml \
+  --stack-name stack-finance-infra-cfn-execution-policy \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ap-northeast-1
 ```
@@ -72,7 +72,7 @@ AWS_PROFILE=finance aws cloudformation deploy \
 ```bash
 # ポリシーARNを動的に取得
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-finance-common-infra-cfn-execution-policies \
+  --stack-name stack-finance-infra-cfn-execution-policy \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -180,8 +180,11 @@ CodeBuild実行時、`buildspec.yml`が以下の処理を自動実行します�
 
 1. **config.jsonの自動生成**
    - `config_sample.json`を`config.json`にコピー
-   - Parameter Store(`/Common/ACM/main`)からACM証明書ARNを取得
-   - プレースホルダー`REPLACE_WITH_ACM_CERTIFICATE_ARN`を実際のARNに置き換え
+   - Parameter Store(`/Common/ACM/arn`)からACM証明書ARNを取得
+   - Parameter Store(`/Dashboard/S3/contents/bucket_name`)からS3バケット名を取得
+   - プレースホルダーを実際の値に置き換え
+     - `REPLACE_WITH_ACM_CERTIFICATE_ARN` → ACM証明書ARN
+     - `REPLACE_WITH_S3_BUCKET_NAME` → S3バケット名
 
 2. **CDKデプロイ**
    - Python仮想環境(.venv)の作成
@@ -192,11 +195,19 @@ CodeBuild実行時、`buildspec.yml`が以下の処理を自動実行します�
 
 CodeBuildで自動デプロイするには、以下の設定が必要です：
 
-1. **ACM証明書ARNをParameter Storeに保存**
+1. **Parameter Storeに必要な値を保存**
    ```bash
+   # ACM証明書ARN
    AWS_PROFILE=finance aws ssm put-parameter \
-     --name "/Common/ACM/main" \
+     --name "/Common/ACM/arn" \
      --value "arn:aws:acm:us-east-1:XXXXXXXXXXXX:certificate/XXXXXXXX" \
+     --type String \
+     --region ap-northeast-1
+
+   # S3バケット名（グローバルに一意である必要があるため、Parameter Storeで管理）
+   AWS_PROFILE=finance aws ssm put-parameter \
+     --name "/Dashboard/S3/contents/bucket_name" \
+     --value "s3-finance-dashboard-contents-XXXXXXXXXXXX" \
      --type String \
      --region ap-northeast-1
    ```
@@ -215,6 +226,7 @@ CodeBuildで自動デプロイするには、以下の設定が必要です：
 |------|-------------|-----------|
 | config.json | 手動作成・編集 | buildspec.ymlで自動生成 |
 | ACM ARN | config.jsonに直接記述 | Parameter Storeから取得 |
+| S3バケット名 | config.jsonに直接記述 | Parameter Storeから取得 |
 | デプロイ | `cdk deploy`を手動実行 | GitHubへのPushで自動実行 |
 
 ## 主な機能
@@ -276,7 +288,7 @@ CDKでは、**CDK実行者**（開発者/CI/CD）と**CloudFormation Execution R
 
 4. **Route53**: DNSレコード設定は含まれていません。手動で設定してください。
 
-5. **CloudFormation Execution Role**: デフォルトではAdministratorAccess相当の権限が付与されます。本番環境では必ず`--cloudformation-execution-policies`でカスタムポリシー（[init/cfn-execution-policies.yaml](init/cfn-execution-policies.yaml)）を使用してください。
+5. **CloudFormation Execution Role**: デフォルトではAdministratorAccess相当の権限が付与されます。本番環境では必ず`--cloudformation-execution-policies`でカスタムポリシー（[init/cfn-execution-policy.yaml](init/cfn-execution-policy.yaml)）を使用してください。
 
 6. **API Gateway URL**: Dashboard MainスタックはSAMスタックからAPI Gateway URLを自動的にインポートします。`config.json`で`sam_stack_name`を指定する必要があります（詳細は「API Gateway URL の設定方法」参照）。
 

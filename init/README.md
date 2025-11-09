@@ -51,8 +51,8 @@ CDKでは、デプロイ時に**2つの異なるロール**が使用されます
 cd /Users/hakira/Programs/wambda-develop/FinanceProject_Infra/init
 
 AWS_PROFILE=finance aws cloudformation deploy \
-  --template-file cfn-execution-policies.yaml \
-  --stack-name stack-finance-common-infra-cfn-execution-policies \
+  --template-file cfn-execution-policy.yaml \
+  --stack-name stack-finance-infra-cfn-execution-policy \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ap-northeast-1
 ```
@@ -64,7 +64,7 @@ AWS_PROFILE=finance aws cloudformation deploy \
 ```bash
 # ポリシーARNを取得
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-finance-common-infra-cfn-execution-policies \
+  --stack-name stack-finance-infra-cfn-execution-policy \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -74,7 +74,7 @@ echo "Policy ARN: ${POLICY_ARN}"
 
 出力例:
 ```
-Policy ARN: arn:aws:iam::355202574892:policy/CDKCloudFormationExecutionPolicy-Finance
+Policy ARN: arn:aws:iam::XXXXXXXXXXXX:policy/policy-finance-infra-cfn-execution
 ```
 
 ### 3. CDK Bootstrapでカスタムポリシーを指定
@@ -83,7 +83,7 @@ Policy ARN: arn:aws:iam::355202574892:policy/CDKCloudFormationExecutionPolicy-Fi
 ```bash
 # ポリシーARNを動的に取得してbootstrap
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-finance-common-infra-cfn-execution-policies \
+  --stack-name stack-finance-infra-cfn-execution-policy \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -97,7 +97,7 @@ AWS_PROFILE=finance cdk bootstrap \
 ```bash
 # ポリシーARNを取得
 POLICY_ARN=$(AWS_PROFILE=finance aws cloudformation describe-stacks \
-  --stack-name stack-finance-common-infra-cfn-execution-policies \
+  --stack-name stack-finance-infra-cfn-execution-policy \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`PolicyArn`].OutputValue' \
   --output text)
@@ -131,7 +131,7 @@ AWS_PROFILE=finance aws iam list-attached-role-policies \
 
 新しいAWSサービスを使用する場合、ポリシーを更新する必要があります。
 
-### 1. cfn-execution-policies.yamlを編集
+### 1. cfn-execution-policy.yamlを編集
 
 必要な権限を追加します。
 
@@ -141,8 +141,8 @@ AWS_PROFILE=finance aws iam list-attached-role-policies \
 cd /Users/hakira/Programs/wambda-develop/FinanceProject_Infra/init
 
 AWS_PROFILE=finance aws cloudformation deploy \
-  --template-file cfn-execution-policies.yaml \
-  --stack-name stack-finance-common-infra-cfn-execution-policies \
+  --template-file cfn-execution-policy.yaml \
+  --stack-name stack-finance-infra-cfn-execution-policy \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ap-northeast-1
 ```
@@ -169,7 +169,7 @@ User: arn:aws:sts::XXXXXXXXXXXX:assumed-role/cdk-hnb659fds-cfn-exec-role-XXXXXXX
 **原因**: CloudFormation実行ロールに必要な権限が不足
 
 **対処法**:
-1. `cfn-execution-policies.yaml`に不足している権限を追加
+1. `cfn-execution-policy.yaml`に不足している権限を追加
 2. スタックを更新（上記「ポリシーの更新」参照）
 3. CDKデプロイを再実行
 
@@ -178,7 +178,7 @@ User: arn:aws:sts::XXXXXXXXXXXX:assumed-role/cdk-hnb659fds-cfn-exec-role-XXXXXXX
 ```bash
 # ポリシースタックを削除
 AWS_PROFILE=finance aws cloudformation delete-stack \
-  --stack-name stack-finance-common-infra-cfn-execution-policies \
+  --stack-name stack-finance-infra-cfn-execution-policy \
   --region ap-northeast-1
 
 # Bootstrap環境を削除
@@ -195,7 +195,7 @@ AWS_PROFILE=finance cdk bootstrap --region ap-northeast-1
 1. **開発環境**: PowerUserAccessでも可（迅速な開発優先）
 2. **本番環境**: カスタムポリシー必須（セキュリティ優先）
 3. **定期的な監査**: 不要な権限が含まれていないか定期的にレビュー
-4. **バージョン管理**: cfn-execution-policies.yamlは必ずGit管理する
+4. **バージョン管理**: cfn-execution-policy.yamlは必ずGit管理する
 5. **変更記録**: ポリシー変更時は理由をコミットメッセージに記載
 
 ## 参考資料
