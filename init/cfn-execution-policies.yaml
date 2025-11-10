@@ -217,6 +217,56 @@ Resources:
               - acm:ListTagsForCertificate
             Resource: '*'
 
+          - Sid: LambdaFunction
+            Effect: Allow
+            Action:
+              - lambda:CreateFunction
+              - lambda:DeleteFunction
+              - lambda:GetFunction
+              - lambda:UpdateFunctionCode
+              - lambda:UpdateFunctionConfiguration
+              - lambda:GetFunctionConfiguration
+              - lambda:InvokeFunction
+            Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*'
+
+          - Sid: LambdaPermissions
+            Effect: Allow
+            Action:
+              - lambda:AddPermission
+              - lambda:RemovePermission
+            Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*'
+
+          - Sid: LambdaTags
+            Effect: Allow
+            Action:
+              - lambda:TagResource
+              - lambda:UntagResource
+              - lambda:ListTags
+            Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*'
+
+          - Sid: CloudWatchLogsForLambda
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:DeleteLogGroup
+              - logs:DescribeLogGroups
+              - logs:DescribeLogStreams
+              - logs:PutRetentionPolicy
+              - logs:DeleteRetentionPolicy
+            Resource:
+              - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*'
+              - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*'
+
+          - Sid: CloudWatchLogsTags
+            Effect: Allow
+            Action:
+              - logs:TagResource
+              - logs:UntagResource
+              - logs:ListTagsForResource
+            Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*'
+
   # =====================================
   # Policy 4: IAM
   # =====================================
@@ -285,11 +335,7 @@ Resources:
             Effect: Allow
             Action:
               - iam:PassRole
-            Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
-            Condition:
-              StringEquals:
-                iam:PassedToService:
-                  - cloudfront.amazonaws.com
+            Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/stack-*'
 
 Outputs:
   CognitoDynamoDBPolicyArn:
