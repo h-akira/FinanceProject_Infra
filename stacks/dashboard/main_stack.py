@@ -152,6 +152,7 @@ class DashboardMainStack(Stack):
       self, "DistributionId",
       value=distribution.distribution_id,
       description="CloudFront distribution ID",
+      export_name=f"{construct_id}-DistributionId",
     )
 
     CfnOutput(
